@@ -1,4 +1,3 @@
-
 import os
 import time
 import random
@@ -13,7 +12,7 @@ from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, Bot
 from telegram.ext import Application, CommandHandler, ContextTypes
 import requests
 
-# === Load env ===
+# Load environment variables
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 MONGO_URI = os.getenv("MONGO_URI")
@@ -26,15 +25,14 @@ VIP_ACCESS_URL = os.getenv("VIP_ACCESS_URL")
 REQUIRED_CHANNEL = "@dg_gaming_1m0"
 ADMIN_IDS = [int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x.isdigit()]
 
-# === MongoDB ===
+# MongoDB setup
 client = MongoClient(MONGO_URI)
 db = client['likebot']
 users = db['verifications']
 profiles = db['users']
 
-# === Flask App ===
+# Flask verification app
 flask_app = Flask(__name__)
-
 @flask_app.route("/verify/<code>")
 def verify(code):
     user = users.find_one({"code": code})
@@ -43,7 +41,7 @@ def verify(code):
         return "✅ Verification successful. You may return to the bot."
     return "❌ Link expired or already used."
 
-# === Utils ===
+# Utilities
 async def check_channel_membership(user_id: int, bot: Bot) -> bool:
     try:
         member = await bot.get_chat_member(REQUIRED_CHANNEL, user_id)
@@ -54,7 +52,7 @@ async def check_channel_membership(user_id: int, bot: Bot) -> bool:
 def generate_code():
     return ''.join(random.choices(string.ascii_letters + string.digits, k=12))
 
-# === /like Command ===
+# /like command
 async def like_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not await check_channel_membership(user.id, context.bot):
@@ -93,22 +91,16 @@ async def like_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🧠 PURCHASE VIP & NO VERIFY", url=VIP_ACCESS_URL)]
     ])
 
-    msg = (
-        f"🎯 *Like Request Initiated*
+    msg = f"""🎯 *Like Request Initiated*
 
-"
-        f"👤 Player: {name}
-"
-        f"🆔 UID: {uid}
-"
-        f"🌍 Region: IND
+👤 Player: {name}
+🔖 UID: {uid}
+🌍 Region: IND
 
-"
-        f"⚠️ Verify within 10 minutes."
-    )
+⏳ Verify within 10 minutes."""
     await update.message.reply_text(msg, reply_markup=keyboard, parse_mode='Markdown')
 
-# === VIP Command ===
+# VIP command
 async def givevip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
         await update.message.reply_text("🚫 Not authorized.")
@@ -122,7 +114,7 @@ async def givevip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     profiles.update_one({"user_id": target}, {"$set": {"is_vip": True}}, upsert=True)
     await update.message.reply_text(f"✅ VIP granted to `{target}`", parse_mode='Markdown')
 
-# === Background Like Processor ===
+# Background task to process verified likes
 async def process_verified_likes(app: Application):
     while True:
         pending = users.find({"verified": True, "processed": {"$ne": True}})
@@ -140,14 +132,10 @@ async def process_verified_likes(app: Application):
                     remaining = timedelta(hours=24) - (datetime.utcnow() - last_used)
                     hours, remainder = divmod(remaining.seconds, 3600)
                     mins = remainder // 60
-                    await app.bot.send_message(
-                        chat_id=chat_id,
-                        reply_to_message_id=msg_id,
-                        text=f"❌ *Daily Limit Reached*
+                    await app.bot.send_message(chat_id=chat_id, reply_to_message_id=msg_id,
+                        text=f"""❌ *Daily Limit Reached*
 
-⏳ Try again after: {hours}h {mins}m",
-                        parse_mode='Markdown'
-                    )
+⏳ Try again after: {hours}h {mins}m""", parse_mode='Markdown')
                     users.update_one({"_id": user['_id']}, {"$set": {"processed": True}})
                     continue
 
@@ -162,33 +150,25 @@ async def process_verified_likes(app: Application):
                     text = "❌ Like failed or daily limit reached."
                 else:
                     profiles.update_one({"user_id": user_id}, {"$set": {"last_used": datetime.utcnow()}}, upsert=True)
-                    text = (
-                        f"✅ *Like Sent Successfully*
+                    text = f"""✅ *Like Sent Successfully*
 
-"
-                        f"👤 *Player:* {name}
-"
-                        f"🆔 *UID:* `{uid}`
-"
-                        f"👍 *Likes Before:* {before}
-"
-                        f"✨ *Likes Added:* {added}
-"
-                        f"🇮🇳 *Total Now:* {after}
-"
-                        f"⏰ *At:* {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
-                    )
+👤 *Player:* {name}
+🔖 *UID:* `{uid}`
+👍 *Likes Before:* {before}
+✨ *Likes Added:* {added}
+🇮🇳 *Total Now:* {after}
+🕰️ *At:* {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"""
             except Exception as e:
-                text = f"❌ Error processing like.
+                text = f"""❌ Error processing like.
 
 UID: `{uid}`
-Error: {str(e)}"
+Error: {str(e)}"""
 
             await app.bot.send_message(chat_id=chat_id, reply_to_message_id=msg_id, text=text, parse_mode='Markdown')
             users.update_one({"_id": user['_id']}, {"$set": {"processed": True}})
         await asyncio.sleep(5)
 
-# === Bot Runner ===
+# Bot Runner
 def run_bot():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("like", like_command))
@@ -200,5 +180,5 @@ def run_bot():
     asyncio.get_event_loop().create_task(process_verified_likes(app))
     app.run_polling()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     run_bot()
