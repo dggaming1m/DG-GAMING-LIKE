@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: dg-gaming-like
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn bot:flask_app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: BOT_TOKEN
+        value: 7716098063:AAFgc9AQlV6Sa7Zo2gFboRJcZ2R_K8WpkNE
+      - key: MONGO_URI
+        value: mongodb+srv://dggaming:dggaming@cluster0.qnfxnzm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - key: SHORTNER_API
+        value: 0b3be11de98ce79a01b780153eaca00c1927c157
+      - key: FLASK_URL
+        value: https://dg-gaming-like.onrender.com
+      - key: LIKE_API_URL
+        value: https://paid-like-api.vercel.app/like?server_name=ind&uid={uid}
+      - key: PLAYER_INFO_API
+        value: https://dev-without-region.vercel.app/player-info?uid=12345678 https://paid-like-api.vercel.app/player_info?uid={uid}
+      - key: HOW_TO_VERIFY_URL
+        value: https://t.me/dg_gaming_1m0/115
+      - key: VIP_ACCESS_URL
+        value: http://t.me/dg_gaming_1m
+      - key: ADMIN_IDS
+        value: 5670174770
