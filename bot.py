@@ -1,4 +1,3 @@
-
 import os
 import time
 import random
@@ -74,7 +73,9 @@ async def like_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         name = f"Player-{uid[-4:]}"
 
     code = generate_code()
-    short_link = requests.get(f"https://shortner.in/api?api={SHORTNER_API}&url={FLASK_URL}/verify/{code}").json().get("shortenedUrl", f"{FLASK_URL}/verify/{code}")
+    short_link = requests.get(
+        f"https://shortner.in/api?api={SHORTNER_API}&url={FLASK_URL}/verify/{code}"
+    ).json().get("shortenedUrl", f"{FLASK_URL}/verify/{code}")
 
     users.insert_one({
         "user_id": user.id,
@@ -93,16 +94,10 @@ async def like_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ])
 
     msg = (
-        f"🎯 *Like Request Initiated*
-
-"
-        f"🧑 Player: {name}
-"
-        f"🆔 UID: {uid}
-"
-        f"🌍 Region: IND
-
-"
+        f"🎯 *Like Request Initiated*\n\n"
+        f"👤 Player: {name}\n"
+        f"📍 UID: {uid}\n"
+        f"🌍 Region: IND\n\n"
         f"⏱️ Verify within 10 minutes."
     )
     await update.message.reply_text(msg, reply_markup=keyboard, parse_mode='Markdown')
@@ -140,9 +135,7 @@ async def process_verified_likes(app: Application):
                     hours, remainder = divmod(remaining.seconds, 3600)
                     mins = remainder // 60
                     await app.bot.send_message(chat_id=chat_id, reply_to_message_id=msg_id,
-                        text=f"❌ *Daily Limit Reached*
-
-⏳ Try again after: {hours}h {mins}m", parse_mode='Markdown')
+                        text=f"❌ *Daily Limit Reached*\n\n⏳ Try again after: {hours}h {mins}m", parse_mode='Markdown')
                     users.update_one({"_id": user['_id']}, {"$set": {"processed": True}})
                     continue
 
@@ -158,26 +151,16 @@ async def process_verified_likes(app: Application):
                 else:
                     profiles.update_one({"user_id": user_id}, {"$set": {"last_used": datetime.utcnow()}}, upsert=True)
                     text = (
-                        f"✅ *Like Sent Successfully*
-
-"
-                        f"🧑 *Player:* {name}
-"
-                        f"🆔 *UID:* `{uid}`
-"
-                        f"👍 *Likes Before:* {before}
-"
-                        f"✨ *Likes Added:* {added}
-"
-                        f"🇮🇳 *Total Now:* {after}
-"
+                        f"✅ *Like Sent Successfully*\n\n"
+                        f"👤 *Player:* {name}\n"
+                        f"📍 *UID:* `{uid}`\n"
+                        f"👍 *Likes Before:* {before}\n"
+                        f"✨ *Likes Added:* {added}\n"
+                        f"🇮🇳 *Total Now:* {after}\n"
                         f"🕒 *At:* {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}"
                     )
             except Exception as e:
-                text = f"❌ Error processing like.
-
-UID: `{uid}`
-Error: {str(e)}"
+                text = f"❌ Error processing like.\n\nUID: `{uid}`\nError: {str(e)}"
 
             await app.bot.send_message(chat_id=chat_id, reply_to_message_id=msg_id, text=text, parse_mode='Markdown')
             users.update_one({"_id": user['_id']}, {"$set": {"processed": True}})
